@@ -11,6 +11,8 @@ import InventoryChart from "../components/InventoryChart";
 import AIRecommendations from "../components/AIRecommendations";
 import AIAssistant from "../components/AIAssistant";
 import AIBusinessScore from "../components/AIBusinessScore";
+import AIForecastChart from "../components/AIForecastChart";
+import AIDashboardSummary from "../components/AIDashboardSummary";
 
 import {
 FaBell,
@@ -26,11 +28,15 @@ import { Link } from "react-router-dom";
 export default function Dashboard(){
 
 
+
 const [sales,setSales] = useState([]);
 const [customers,setCustomers] = useState([]);
 const [products,setProducts] = useState([]);
 
+const [aiSummary,setAiSummary] = useState(null);
+
 const [company,setCompany] = useState(null);
+
 const [notifications,setNotifications] = useState([]);
 
 const [forecast,setForecast] = useState(null);
@@ -39,10 +45,11 @@ const [loading,setLoading] = useState(true);
 
 
 
-// =========================
-// LOAD DASHBOARD
-// =========================
 
+
+// =============================
+// LOAD DASHBOARD DATA
+// =============================
 
 const loadDashboard = async()=>{
 
@@ -53,7 +60,6 @@ const [
 salesRes,
 customersRes,
 productsRes
-
 ]=await Promise.all([
 
 API.get("/sales"),
@@ -79,13 +85,12 @@ productsRes.data.data || []
 );
 
 
-
 }
 
 catch(error){
 
 console.log(
-"Dashboard error:",
+"Dashboard Error:",
 error
 );
 
@@ -104,19 +109,53 @@ setLoading(false);
 
 
 
-// =========================
-// COMPANY
-// =========================
+// =============================
+// AI SUMMARY
+// =============================
 
+
+const loadAISummary = async()=>{
+
+try{
+
+
+const res =
+await API.get(
+"/ai/dashboard-summary"
+);
+
+
+setAiSummary(
+res.data.summary
+);
+
+
+}
+
+catch(error){
+
+console.log(
+"AI Summary Error:",
+error
+);
+
+}
+
+
+};
+
+
+
+
+
+// =============================
+// COMPANY
+// =============================
 
 const loadCompany = async()=>{
 
 
-const {
-data:user
-
-}=await supabase.auth.getUser();
-
+const {data:user}=await supabase.auth.getUser();
 
 
 if(!user.user)
@@ -148,12 +187,12 @@ setCompany(data);
 
 
 
-// =========================
+
+// =============================
 // NOTIFICATIONS
-// =========================
+// =============================
 
-
-const loadNotifications=async()=>{
+const loadNotifications = async()=>{
 
 
 try{
@@ -172,9 +211,9 @@ res.data.notifications || []
 
 }
 
-catch(err){
+catch(error){
 
-console.log(err);
+console.log(error);
 
 }
 
@@ -185,12 +224,12 @@ console.log(err);
 
 
 
-// =========================
+
+// =============================
 // FORECAST
-// =========================
+// =============================
 
-
-const loadForecast=async()=>{
+const loadForecast = async()=>{
 
 
 try{
@@ -202,7 +241,6 @@ await API.get(
 );
 
 
-
 setForecast(
 res.data
 );
@@ -210,9 +248,9 @@ res.data
 
 }
 
-catch(err){
+catch(error){
 
-console.log(err);
+console.log(error);
 
 }
 
@@ -223,15 +261,18 @@ console.log(err);
 
 
 
-// =========================
-// REALTIME FIXED
-// =========================
+
+// =============================
+// REALTIME
+// =============================
 
 
 useEffect(()=>{
 
 
 loadDashboard();
+
+loadAISummary();
 
 loadCompany();
 
@@ -242,65 +283,54 @@ loadForecast();
 
 
 
-const salesChannel =
-supabase
-.channel("sales-live")
+
+const tables=[
+"sales",
+"products",
+"customers"
+];
+
+
+
+const channels =
+tables.map(table=>{
+
+
+return supabase
+
+.channel(
+`${table}-live`
+)
+
 .on(
+
 "postgres_changes",
+
 {
+
 event:"*",
+
 schema:"public",
-table:"sales"
+
+table
+
 },
+
 ()=>{
 
 loadDashboard();
 
+loadAISummary();
+
 }
+
 )
+
 .subscribe();
 
 
+});
 
-
-const productChannel =
-supabase
-.channel("products-live")
-.on(
-"postgres_changes",
-{
-event:"*",
-schema:"public",
-table:"products"
-},
-()=>{
-
-loadDashboard();
-
-}
-)
-.subscribe();
-
-
-
-
-const customerChannel =
-supabase
-.channel("customers-live")
-.on(
-"postgres_changes",
-{
-event:"*",
-schema:"public",
-table:"customers"
-},
-()=>{
-
-loadDashboard();
-
-}
-)
-.subscribe();
 
 
 
@@ -308,25 +338,19 @@ loadDashboard();
 return ()=>{
 
 
-supabase.removeChannel(
-salesChannel
-);
+channels.forEach(channel=>{
 
+supabase.removeChannel(channel);
 
-supabase.removeChannel(
-productChannel
-);
-
-
-supabase.removeChannel(
-customerChannel
-);
+});
 
 
 };
 
 
 },[]);
+
+
 
 
 
@@ -345,7 +369,12 @@ total + Number(item.amount || 0),
 
 
 
+
+
+
+
 if(loading){
+
 
 return(
 
@@ -355,19 +384,27 @@ return(
 🤖 Loading AI Dashboard...
 </h2>
 
+
 </div>
 
 )
 
+
 }
-return (
+
+
+
+
+
+
+
+return(
+
 
 <div className="dashboard">
 
 
-{/* =========================
-AI HERO
-========================= */}
+
 
 
 <section className="ai-hero-v3">
@@ -394,7 +431,10 @@ Good Morning 👋
 
 <h2>
 
-{company?.company_name || "Your Business"}
+{
+company?.company_name ||
+"Your Business"
+}
 
 </h2>
 
@@ -402,11 +442,18 @@ Good Morning 👋
 
 <p>
 
-{company?.business_type || "Business"}
+{
+company?.business_type ||
+"Business"
+}
 
-&nbsp; • &nbsp;
+ • 
 
-{company?.country || "Country"}
+{
+company?.country ||
+"Country"
+}
+
 
 </p>
 
@@ -426,11 +473,8 @@ customers and inventory automatically.
 
 
 <Link
-
 to="/ai-assistant"
-
 className="primary-btn"
-
 >
 
 <FaRobot/>
@@ -441,13 +485,9 @@ Ask AI
 
 
 
-
 <Link
-
 to="/reports"
-
 className="secondary-btn"
-
 >
 
 📄 Generate Report
@@ -465,18 +505,14 @@ className="secondary-btn"
 
 
 
-
 <div className="hero-right">
 
 
-
 <Link
-
 to="/notifications"
-
 className="notification-bell"
-
 >
+
 
 <FaBell/>
 
@@ -489,7 +525,6 @@ className="notification-bell"
 
 
 </Link>
-
 
 
 
@@ -511,7 +546,6 @@ className="notification-bell"
 
 
 
-
 <div className="prediction-card">
 
 
@@ -525,23 +559,18 @@ className="notification-bell"
 
 <h2>
 
+$
+
 {
-
 forecast
-
 ?
-
-"$"+forecast.nextMonthPrediction
-
+forecast.nextMonthPrediction
 :
-
 "Loading..."
-
 }
 
 
 </h2>
-
 
 
 <p>
@@ -551,8 +580,8 @@ AI estimated next month revenue
 </p>
 
 
-</div>
 
+</div>
 
 
 </div>
@@ -567,11 +596,24 @@ AI estimated next month revenue
 
 
 
+{/* AI SUMMARY */}
+
+{
+
+aiSummary &&
+
+<AIDashboardSummary
+
+summary={aiSummary}
+
+/>
+
+}
 
 
-{/* =========================
-STATS
-========================= */}
+
+
+
 
 
 
@@ -594,23 +636,12 @@ revenue={revenue}
 
 
 
-{/* =========================
-AI SCORE
-========================= */}
-
-
 <AIBusinessScore/>
 
 
 
 
 
-
-
-
-{/* =========================
-AI TOOLS
-========================= */}
 
 
 
@@ -625,22 +656,16 @@ AI TOOLS
 
 
 
-
 <div className="ai-dashboard-grid">
 
 
 
 <Link
-
 to="/ai-forecast"
-
 className="ai-dashboard-card"
-
 >
 
-
 <FaChartLine/>
-
 
 <div>
 
@@ -667,18 +692,12 @@ Predict future revenue
 
 
 
-
 <Link
-
 to="/ai-inventory"
-
 className="ai-dashboard-card"
-
 >
 
-
 <FaBox/>
-
 
 <div>
 
@@ -705,18 +724,12 @@ Detect low stock
 
 
 
-
 <Link
-
 to="/ai-customers"
-
 className="ai-dashboard-card"
-
 >
 
-
 <FaUsers/>
-
 
 <div>
 
@@ -740,8 +753,6 @@ Find VIP customers
 </Link>
 
 
-
-
 </div>
 
 
@@ -754,37 +765,41 @@ Find VIP customers
 
 
 
-{/* =========================
-CHARTS
-========================= */}
-
-
 
 <section className="analytics-grid">
+
+
+<div className="glass-card">
+
+<h2>
+🤖 AI Sales Forecast
+</h2>
+
+
+<AIForecastChart
+sales={sales}
+/>
+
+
+</div>
+
+
 
 
 
 <div className="glass-card">
 
-
 <h2>
-
 💰 Revenue Growth
-
 </h2>
-
 
 
 <RevenueChart
-
 sales={sales}
-
 />
 
 
 </div>
-
-
 
 
 
@@ -792,24 +807,17 @@ sales={sales}
 
 <div className="glass-card">
 
-
 <h2>
-
 🛒 Sales Performance
-
 </h2>
 
 
-
 <SalesChart
-
 sales={sales}
-
 />
 
 
 </div>
-
 
 
 </section>
@@ -822,25 +830,14 @@ sales={sales}
 
 
 
-{/* =========================
-AI + INVENTORY
-========================= */}
-
-
-
 <section className="analytics-grid">
-
 
 
 <div className="glass-card">
 
-
 <h2>
-
 🤖 AI Recommendations
-
 </h2>
-
 
 
 <AIRecommendations
@@ -858,17 +855,11 @@ products={products}
 
 
 
-
-
 <div className="glass-card">
 
-
 <h2>
-
 📦 Inventory Status
-
 </h2>
-
 
 
 <InventoryChart
@@ -891,13 +882,6 @@ products={products}
 
 
 
-
-{/* =========================
-RECENT SALES
-========================= */}
-
-
-
 <section className="glass-card recent-sales">
 
 
@@ -909,40 +893,28 @@ RECENT SALES
 
 
 
-
-
 {
 
-sales.length === 0 ?
+sales.length===0
 
-
-(
+?
 
 <p>
-
 No sales available
-
 </p>
-
-)
 
 
 :
 
 
-sales.slice(0,5).map((item)=>(
+sales.slice(0,5).map(item=>(
 
 
 <div
-
 className="sale-row"
-
 key={item.id}
-
 >
 
-
-<div>
 
 <span>
 
@@ -951,17 +923,11 @@ key={item.id}
 </span>
 
 
-</div>
-
-
-
-
 <strong>
 
 ${Number(item.amount || 0)}
 
 </strong>
-
 
 
 </div>
@@ -983,19 +949,11 @@ ${Number(item.amount || 0)}
 
 
 
-
-{/* =========================
-AI CHAT
-========================= */}
-
-
-
 <AIAssistant/>
 
 
-
-
 </div>
+
 
 );
 

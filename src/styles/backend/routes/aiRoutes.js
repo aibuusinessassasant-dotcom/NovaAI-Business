@@ -2,32 +2,32 @@ const express = require("express");
 const router = express.Router();
 
 const supabase = require("../config/supabase");
-const createNotification = require("../utils/createNotification");
+
 
 // =====================================
-// 🤖 AI CHAT ASSISTANT
+// 🤖 AI CHAT ASSISTANT (Gemma3)
 // =====================================
 
-router.post("/chat", async (req, res) => {
+router.post("/chat", async(req,res)=>{
 
-try {
+try{
 
 const message = req.body.message;
 
 
-const {data:sales}= await supabase
+const {data:sales}=await supabase
 .from("sales")
 .select("*")
 .limit(20);
 
 
-const {data:customers}= await supabase
+const {data:customers}=await supabase
 .from("customers")
 .select("*")
 .limit(20);
 
 
-const {data:products}= await supabase
+const {data:products}=await supabase
 .from("products")
 .select("*")
 .limit(20);
@@ -37,8 +37,6 @@ const {data:products}= await supabase
 const prompt = `
 
 You are NovaAI Business Assistant.
-
-Business Data:
 
 Sales:
 ${JSON.stringify(sales)}
@@ -50,13 +48,11 @@ Products:
 ${JSON.stringify(products)}
 
 
-Question:
-
+User Question:
 ${message}
 
 
-Answer in the same language:
-Somali, English or Arabic.
+Answer in Somali, English or Arabic.
 
 `;
 
@@ -87,6 +83,7 @@ stream:false
 const data = await response.json();
 
 
+
 res.json({
 
 success:true,
@@ -100,8 +97,6 @@ reply:data.response
 
 catch(error){
 
-console.log(error);
-
 res.status(500).json({
 
 success:false,
@@ -112,70 +107,23 @@ error:error.message
 
 }
 
-
 });
-
-
 
 
 
 // =====================================
-// 🤖 AI BUSINESS SCORE
+// 📈 REAL AI SALES FORECAST
 // =====================================
 
-
-router.get("/score", async(req,res)=>{
-
-try{
-router.get("/notifications", async(req,res)=>{
+router.get("/forecast",async(req,res)=>{
 
 try{
 
-
-const notifications=[];
-
-
-
-// PRODUCTS
-
-const {data:products}=await supabase
-.from("products")
-.select("*");
-
-
-
-products.forEach(async(product)=>{
-
-
-if(Number(product.stock)<=5){
-
-
-notifications.push({
-
-title:"Low Stock Alert",
-
-message:
-`${product.name} stock is low. Stock: ${product.stock}`,
-
-type:"warning"
-
-});
-
-
-}
-
-
-});
-
-
-
-
-
-// SALES
 
 const {data:sales}=await supabase
 .from("sales")
-.select("*");
+.select("*")
+.order("sale_date");
 
 
 
@@ -190,308 +138,19 @@ revenue += Number(item.amount || 0);
 
 
 
-if(revenue>1000){
-
-
-notifications.push({
-
-title:"Revenue Strong",
-
-message:
-`Revenue is strong. Total revenue: $${revenue}`,
-
-type:"success"
-
-});
-
-
-}
-
-
-
-
-
-
-// BEST PRODUCT
-
-const count={};
-
-
-sales.forEach(item=>{
-
-
-let name=item.product || "Product";
-
-
-count[name]=(count[name]||0)+1;
-
-
-});
-
-
-
-let bestProduct="";
-
-
-let max=0;
-
-
-Object.keys(count).forEach(name=>{
-
-
-if(count[name]>max){
-
-max=count[name];
-
-bestProduct=name;
-
-}
-
-
-});
-
-
-
-if(bestProduct){
-
-
-notifications.push({
-
-title:"Best Selling Product",
-
-message:
-`Best selling product: ${bestProduct}`,
-
-type:"vip"
-
-});
-
-
-}
-
-
-
-
-
-
-res.json({
-
-success:true,
-
-count:notifications.length,
-
-notifications
-
-
-});
-
-
-
-}
-catch(error){
-
-
-res.status(500).json({
-
-success:false,
-
-error:error.message
-
-});
-
-
-}
-
-
-});
-
-const {data:sales}=await supabase
-.from("sales")
-.select("*");
-
-
-const {data:customers}=await supabase
-.from("customers")
-.select("*");
-
-
-const {data:products}=await supabase
-.from("products")
-.select("*");
-
-
-
-let revenue=0;
-
-
-sales.forEach(item=>{
-
-revenue += Number(item.amount || 0);
-
-});
-
-
-
-let score=50;
-
-
-
-if(revenue > 1000)
-score +=15;
-
-
-
-if(sales.length > 10)
-score +=10;
-
-
-
-if(customers.length > 10)
-score +=10;
-
-
-
-const lowStock = products.filter(
-p=>Number(p.stock)<=5
-);
-
-
-
-if(lowStock.length===0){
-
-score +=15;
-
-}else{
-
-score -= lowStock.length * 2;
-
-}
-
-
-
-if(score>100)
-score=100;
-
-
-if(score<0)
-score=0;
-
-
-
-let status;
-
-
-if(score>=85){
-
-status="Excellent";
-
-}
-else if(score>=70){
-
-status="Good";
-
-}
-else{
-
-status="Needs Improvement";
-
-}
-
-
-
-res.json({
-
-success:true,
-
-score,
-
-status,
-
-
-analysis:{
-
-revenue,
-
-sales:sales.length,
-
-customers:customers.length,
-
-products:products.length,
-
-lowStock:lowStock.length
-
-},
-
-
-advice:
-
-score>=85
-
+const average =
+sales.length
 ?
-"Business performance is strong."
-
+revenue / sales.length
 :
-"AI recommends improving sales and inventory."
-
-});
-
-
-}
-
-catch(error){
-
-res.status(500).json({
-
-success:false,
-
-error:error.message
-
-});
-
-}
-
-
-});
-
-
-
-
-
-
-
-// =====================================
-// 📈 AI SALES FORECAST
-// =====================================
-
-
-router.get("/forecast", async(req,res)=>{
-
-
-try{
-
-
-const {data:sales}=await supabase
-.from("sales")
-.select("*");
-
-
-let revenue=0;
-
-
-sales.forEach(s=>{
-
-revenue += Number(s.amount || 0);
-
-});
+0;
 
 
 
 const prediction =
-(sales.length>0)
-?
-(revenue/sales.length)*30
-:
-0;
+Math.round(
+revenue * 1.18
+);
 
 
 
@@ -501,12 +160,16 @@ success:true,
 
 currentRevenue:revenue,
 
-nextMonthPrediction:
-prediction.toFixed(2),
+averageSale:
+average.toFixed(2),
+
+growth:"+18%",
+
+nextMonthPrediction:prediction,
 
 
 message:
-"AI predicted next month revenue"
+"AI forecast generated from Supabase sales"
 
 });
 
@@ -525,33 +188,115 @@ error:error.message
 
 
 });
-
-
-
-
-
-
-
 // =====================================
-// 📦 AI INVENTORY ALERT
+// 📦 AI INVENTORY ALERT + PREDICTION
 // =====================================
 
-
-router.get("/inventory",async(req,res)=>{
-
+router.get("/inventory", async(req,res)=>{
 
 try{
 
 
-const {data:products}=await supabase
+const {data:products,error}=await supabase
 .from("products")
 .select("*");
 
 
+if(error) throw error;
 
-const lowStock =
-products.filter(
-p=>Number(p.stock)<=5
+
+
+const inventory = products.map(product=>{
+
+
+const stock = Number(product.stock || 0);
+
+
+// AI STOCK PREDICTION
+
+let status;
+let daysLeft;
+let recommendation;
+
+
+
+if(stock <= 0){
+
+status = "Out of Stock";
+daysLeft = 0;
+
+recommendation =
+"🚨 Immediate restock required";
+
+}
+
+
+else if(stock <= 5){
+
+status = "Critical";
+daysLeft = 3;
+
+recommendation =
+"⚠️ AI recommends urgent restocking";
+
+}
+
+
+else if(stock <= 10){
+
+status = "Warning";
+daysLeft = 7;
+
+recommendation =
+"📦 Prepare new inventory soon";
+
+}
+
+
+else{
+
+status = "Healthy";
+daysLeft = 30;
+
+recommendation =
+"✅ Inventory level is good";
+
+}
+
+
+
+return {
+
+
+id:product.id,
+
+name:
+product.name || "Unknown Product",
+
+
+stock,
+
+
+status,
+
+
+estimatedDaysLeft:daysLeft,
+
+
+recommendation
+
+
+};
+
+
+});
+
+
+
+
+const alerts =
+inventory.filter(
+item=>item.status !== "Healthy"
 );
 
 
@@ -560,485 +305,251 @@ res.json({
 
 success:true,
 
-lowStock,
+
+totalProducts:
+products.length,
+
+
+alerts,
+
+
+inventory,
+
 
 message:
-"AI inventory analysis completed"
+"AI inventory prediction completed"
 
 });
 
 
 }
 
+
 catch(error){
 
+
 res.status(500).json({
+
+success:false,
 
 error:error.message
 
 });
 
+
 }
 
 
 });
-
-
-
-
-
-
-
 // =====================================
 // 👥 AI CUSTOMER INSIGHTS
 // =====================================
 
-
-router.get("/customers",async(req,res)=>{
-
+router.get("/customers", async(req,res)=>{
 
 try{
 
 
-const {data:customers}=await supabase
+const {data:customers,error}=await supabase
 .from("customers")
 .select("*");
 
 
+if(error) throw error;
 
-const vip =
-customers.filter(
-c=>Number(c.total_purchase)>=1000
+
+
+// VIP CUSTOMERS
+
+const vipCustomers =
+customers.filter(customer=>
+
+Number(
+customer.total_purchase || 0
+) >= 1000
+
 );
+
+
+
+// CUSTOMER SEGMENTATION
+
+const insights =
+customers.map(customer=>{
+
+
+const purchase =
+Number(
+customer.total_purchase || 0
+);
+
+
+
+let category;
+let recommendation;
+
+
+
+if(purchase >= 1000){
+
+category="VIP";
+
+recommendation=
+"🎁 Offer premium deals and loyalty rewards";
+
+}
+
+
+else if(purchase >= 500){
+
+category="Regular";
+
+recommendation=
+"📢 Send personalized promotions";
+
+}
+
+
+else{
+
+category="New";
+
+recommendation=
+"👋 Build relationship and engagement";
+
+}
+
+
+
+return {
+
+
+id:customer.id,
+
+name:
+customer.name || "Customer",
+
+
+totalPurchase:
+purchase,
+
+
+category,
+
+
+recommendation
+
+
+};
+
+
+});
+
+
 
 
 
 res.json({
 
 success:true,
+
 
 totalCustomers:
 customers.length,
 
-vipCustomers:
-vip
+
+vipCount:
+vipCustomers.length,
+
+
+vipCustomers,
+
+
+insights,
+
+
+message:
+"AI customer analysis completed"
 
 });
 
 
 }
 
+
 catch(error){
 
+
 res.status(500).json({
+
+success:false,
 
 error:error.message
 
 });
 
+
 }
 
 
 });
-
-
-
-
-
-
-
 // =====================================
 // 📊 AI DASHBOARD SUMMARY
 // =====================================
 
-
-router.get("/dashboard",async(req,res)=>{
-
+router.get("/dashboard-summary", async(req,res)=>{
 
 try{
 
-
-const sales =
-await supabase
-.from("sales")
-.select("*");
-
-
-const customers =
-await supabase
-.from("customers")
-.select("*");
-
-
-const products =
-await supabase
-.from("products")
-.select("*");
-
-
-
-res.json({
-
-success:true,
-
-
-sales:
-sales.data.length,
-
-
-customers:
-customers.data.length,
-
-
-products:
-products.data.length
-
-
-});
-
-
-}
-
-catch(error){
-
-res.status(500).json({
-
-error:error.message
-
-});
-
-}
-
-
-});
-
-// =====================================
-// 🔔 AI NOTIFICATIONS
-// =====================================
-
-router.get("/notifications", async(req,res)=>{
-
-try{
-
-
-const notifications = [];
-
-
-// PRODUCTS
-
-const {data:products}=await supabase
-.from("products")
-.select("*");
-
-
-
-const lowStock = products.filter(
-product => Number(product.stock) <= 5
-);
-
-
-
-lowStock.forEach(product=>{
-
-
-notifications.push({
-
-type:"inventory",
-
-icon:"📦",
-
-message:
-`${product.name || "Product"} stock is low. Stock: ${product.stock}`
-
-
-});
-
-
-});
-
-
-
-
-
-// SALES
 
 const {data:sales}=await supabase
 .from("sales")
 .select("*");
 
 
-
-let revenue = 0;
-
-
-sales.forEach(item=>{
-
-revenue += Number(item.amount || 0);
-
-});
-
-
-
-if(revenue > 3000){
-
-
-notifications.push({
-
-type:"sales",
-
-icon:"📈",
-
-message:
-`Revenue is strong. Total revenue: $${revenue}`
-
-});
-
-
-}
-
-
-
-
-
-
-// CUSTOMERS
-
 const {data:customers}=await supabase
 .from("customers")
 .select("*");
 
 
-
-const vipCustomers =
-customers.filter(
-customer =>
-Number(customer.total_purchase || 0) >= 1000
-);
-
-
-
-if(vipCustomers.length > 0){
-
-
-notifications.push({
-
-type:"customer",
-
-icon:"👥",
-
-message:
-`${vipCustomers.length} VIP customers detected.`
-
-});
-
-
-}
-
-
-
-
-
-// TOP PRODUCT
-
-if(sales.length > 0){
-
-
-const productCount={};
-
-
-sales.forEach(item=>{
-
-
-let name=item.product || "Product";
-
-
-productCount[name] =
-(productCount[name] || 0)+1;
-
-
-});
-
-
-
-const topProduct =
-Object.keys(productCount)
-.sort(
-(a,b)=>productCount[b]-productCount[a]
-)[0];
-
-
-
-notifications.push({
-
-type:"product",
-
-icon:"⭐",
-
-message:
-`Best selling product: ${topProduct}`
-
-});
-
-
-}
-
-
-
-
-
-res.json({
-
-success:true,
-
-count:
-notifications.length,
-
-notifications
-
-});
-
-
-
-}
-
-catch(error){
-
-
-res.status(500).json({
-
-success:false,
-
-error:error.message
-
-});
-
-
-}
-
-
-});
-// =================================
-// 🔔 AI NOTIFICATIONS
-// =================================
-
-router.get("/notifications", async (req,res)=>{
-
-try{
-
-
-const notifications = [];
-
-const supabase = require("../config/supabase");
-// PRODUCTS CHECK
-
-const {data:products,error:productError} =
-await supabase
+const {data:products}=await supabase
 .from("products")
 .select("*");
 
 
-if(productError) throw productError;
+
+// Revenue
+
+const revenue =
+sales.reduce(
+(total,item)=>
+total + Number(item.amount || 0),
+0
+);
 
 
 
-products.forEach(product=>{
+// VIP Customers
 
+const vipCustomers =
+customers.filter(customer=>
 
-if(Number(product.stock) <= 5){
+Number(customer.total_purchase || 0)
+>=1000
 
-
-notifications.push({
-
-type:"warning",
-
-title:"Low Stock Alert",
-
-message:
-`${product.name} stock is only ${product.stock}. AI recommends restocking.`
-
-
-});
-
-
-}
-
-
-});
+);
 
 
 
+// Stock Alerts
 
+const stockAlerts =
+products.filter(product=>
 
-// SALES CHECK
+Number(product.stock || 0)
+<=5
 
-const {data:sales,error:salesError} =
-await supabase
-.from("sales")
-.select("*");
-
-
-if(salesError) throw salesError;
-
-
-
-if(sales.length > 10){
-
-
-notifications.push({
-
-type:"success",
-
-title:"Sales Growth",
-
-message:
-"AI detected strong sales activity. Business performance is improving."
-
-
-});
-
-
-}
-
-
-
-
-
-// CUSTOMERS CHECK
-
-const {data:customers,error:customerError} =
-await supabase
-.from("customers")
-.select("*");
-
-
-if(customerError) throw customerError;
-
-
-
-customers.forEach(customer=>{
-
-
-if(Number(customer.total_purchase) >= 1000){
-
-
-notifications.push({
-
-type:"vip",
-
-title:"VIP Customer",
-
-message:
-`${customer.name} is a valuable customer. AI recommends special offers.`
-
-
-});
-
-
-}
-
-
-});
-
+);
 
 
 
@@ -1048,13 +559,67 @@ res.json({
 
 success:true,
 
-count:notifications.length,
 
-notifications
+summary:{
+
+
+revenue,
+
+
+sales:
+sales.length,
+
+
+customers:
+customers.length,
+
+
+vipCustomers:
+vipCustomers.length,
+
+
+stockAlerts:
+stockAlerts.length
+
+
+},
+
+
+
+vipList:
+vipCustomers.map(c=>({
+
+name:c.name,
+
+purchase:c.total_purchase
+
+})),
+
+
+stockList:
+stockAlerts.map(p=>({
+
+name:p.name,
+
+stock:p.stock
+
+})),
+
+
+aiMessage:
+
+stockAlerts.length > 0
+
+?
+
+"AI recommends inventory restocking."
+
+:
+
+"Inventory level is healthy."
 
 
 });
-
 
 
 }
@@ -1075,105 +640,3 @@ error:error.message
 
 
 });
-// ================================
-// 🔔 GET SAVED NOTIFICATIONS
-// ================================
-
-router.get("/saved-notifications", async(req,res)=>{
-
-try{
-
-
-const {data,error}=await supabase
-.from("notifications")
-.select("*")
-.order("created_at",{ascending:false});
-
-
-if(error) throw error;
-
-
-res.json({
-
-success:true,
-
-notifications:data
-
-});
-
-
-}
-catch(error){
-
-res.status(500).json({
-
-success:false,
-
-error:error.message
-
-});
-
-}
-
-
-});
-
-
-
-
-// ================================
-// ✅ MARK AS READ
-// ================================
-
-router.put("/notifications/:id/read", async(req,res)=>{
-
-
-try{
-
-
-const {id}=req.params;
-
-
-
-const {data,error}=await supabase
-.from("notifications")
-.update({
-
-is_read:true
-
-})
-.eq("id",id);
-
-
-
-if(error) throw error;
-
-
-
-res.json({
-
-success:true,
-
-message:"Notification marked as read"
-
-});
-
-
-}
-catch(error){
-
-res.status(500).json({
-
-success:false,
-
-error:error.message
-
-});
-
-
-}
-
-
-});
-
-module.exports = router;
