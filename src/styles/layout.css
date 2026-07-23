@@ -1,0 +1,36 @@
+.app-layout{
+
+min-height:100vh;
+
+background:#020617;
+
+}
+
+
+
+.main-content{
+
+margin-left:260px;
+
+padding:
+
+110px 30px 40px;
+
+
+transition:.3s;
+
+}
+
+
+
+@media(max-width:900px){
+
+.main-content{
+
+margin-left:0;
+
+padding:90px 15px 30px;
+
+}
+
+}

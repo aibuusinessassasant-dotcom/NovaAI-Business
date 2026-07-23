@@ -1,0 +1,81 @@
+.ai-inventory-page {
+    padding: 30px;
+    color: white;
+}
+
+
+.ai-title {
+    margin-bottom: 30px;
+}
+
+
+.ai-title h1 {
+    font-size: 32px;
+}
+
+
+.ai-title p {
+    opacity: .7;
+}
+
+
+
+.inventory-grid {
+
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+    gap:20px;
+
+}
+
+
+
+.inventory-card {
+
+    background:rgba(255,255,255,0.08);
+    backdrop-filter:blur(15px);
+    border-radius:20px;
+    padding:25px;
+    border:1px solid rgba(255,255,255,.1);
+
+}
+
+
+
+.inventory-card h3 {
+
+    font-size:22px;
+
+}
+
+
+
+.alert {
+
+    margin:15px 0;
+    padding:10px;
+    border-radius:10px;
+    background:#ff4757;
+    color:white;
+
+}
+
+
+
+.inventory-good {
+
+    padding:30px;
+    background:rgba(46,213,115,.15);
+    border-radius:20px;
+
+}
+
+
+
+.ai-loading {
+
+    padding:40px;
+    text-align:center;
+    font-size:22px;
+
+}

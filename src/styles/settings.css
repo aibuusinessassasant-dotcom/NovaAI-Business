@@ -1,0 +1,90 @@
+.settings-page{
+    padding:30px;
+    color:white;
+}
+
+
+.settings-page h1{
+    font-size:32px;
+    margin-bottom:30px;
+}
+
+
+.settings-grid{
+
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:25px;
+
+}
+
+
+.setting-card{
+
+    background:rgba(255,255,255,0.08);
+    backdrop-filter:blur(15px);
+
+    border:1px solid rgba(255,255,255,0.1);
+
+    padding:25px;
+
+    border-radius:20px;
+
+    transition:.3s;
+
+}
+
+
+.setting-card:hover{
+
+    transform:translateY(-5px);
+
+}
+
+
+.setting-card h2{
+
+    color:#60a5fa;
+
+}
+
+
+.setting-card p{
+
+    color:#cbd5e1;
+
+}
+
+
+.setting-card button{
+
+    margin-top:20px;
+
+    background:#2563eb;
+
+    color:white;
+
+    border:none;
+
+    padding:12px 25px;
+
+    border-radius:12px;
+
+    cursor:pointer;
+
+}
+
+
+.switch span{
+
+    display:block;
+
+    width:50px;
+
+    height:26px;
+
+    background:#2563eb;
+
+    border-radius:20px;
+
+}
